@@ -101,7 +101,7 @@ export function OperationsOptimizer() {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box>
       <Card sx={{ p: 2 }}>
         <Typography variant="h5" fontWeight="bold">
           Operations Optimizer

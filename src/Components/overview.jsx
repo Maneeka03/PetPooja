@@ -1,5 +1,6 @@
 "use client";
 
+import { Box } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -63,28 +64,30 @@ const data = [
 
 export function Overview() {
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={data}>
-        <XAxis
-          dataKey="name"
-          stroke="#888888"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          stroke="#888888"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `${value}`}
-        />
-        <Tooltip />
-        <Bar dataKey="produce" fill="#4ade80" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="dairy" fill="#60a5fa" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="meat" fill="#f87171" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="dry" fill="#fbbf24" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <Box sx={{ p: 10 }}>
+      <ResponsiveContainer width="100%" height={350}>
+        <BarChart data={data}>
+          <XAxis
+            dataKey="name"
+            stroke="#888888"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            stroke="#888888"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => `${value}`}
+          />
+          <Tooltip />
+          <Bar dataKey="produce" fill="#4ade80" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="dairy" fill="#60a5fa" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="meat" fill="#f87171" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="dry" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </Box>
   );
 }
