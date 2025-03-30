@@ -2,10 +2,22 @@ import { useNavigate } from "react-router-dom";
 import { SpoilagePrediction } from "./spoilage-prediction";
 import { InventoryTracker } from "./inventory-trackor";
 import { OperationsOptimizer } from "./operation-optimizer";
+import FoodRecommendation from "./FoodRecommendation";
+import RestaurentInventory from "./Restaurant-Inventory";
 
 export default function Dashboard({ activeTab }) {
-  //   const [activeTab, setActiveTab] = useState("overview");
-  const navigate = useNavigate();
+  const vegetableInventory = [
+    { name: 'Tomatoes', quantity: 8, quality: 'Poor' },
+    { name: 'Carrots', quantity: 5, quality: 'Fair' },
+    { name: 'Spinach', quantity: 4, quality: 'Poor' },
+    { name: 'Cabbage', quantity: 15, quality: 'Good' },
+    { name: 'Onions', quantity: 7, quality: 'Fair' },
+    { name: 'Bell Peppers', quantity: 9, quality: 'Poor' },
+    { name: 'Mushrooms', quantity: 12, quality: 'Good' },
+    { name: 'Broccoli', quantity: 6, quality: 'Fair' },
+    { name: 'Potatoes', quantity: 20, quality: 'Good' },
+    { name: 'Zucchini', quantity: 10, quality: 'Fair' }
+  ];
 
   return (
     <div className="flex flex-col">
@@ -177,6 +189,16 @@ export default function Dashboard({ activeTab }) {
         {activeTab === "operations" && (
           <div className="text-center p-12 text-gray-500">
             <OperationsOptimizer />
+          </div>
+        )}
+        {activeTab === "restaurentInventory" && (
+          <div className="text-center p-12 text-gray-500">
+            <RestaurentInventory />
+          </div>
+        )}
+        {activeTab === "foodRecommendation" && (
+          <div className="text-center p-12 text-gray-500">
+            <FoodRecommendation vegetables={vegetableInventory}/>
           </div>
         )}
       </div>

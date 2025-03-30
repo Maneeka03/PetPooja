@@ -19,8 +19,13 @@ import {
   Paper,
   Button,
   Badge,
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions
 } from "@mui/material";
 import { Search, FilterList, Refresh, CameraAlt } from "@mui/icons-material";
+import Scan from './Scan';
 
 // Mock inventory data
 const inventoryData = [
@@ -85,6 +90,7 @@ export function InventoryTracker() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [open, setOpen] = useState(false);
 
   const filteredInventory = inventory.filter((item) => {
     const matchesSearch = item.name
@@ -147,7 +153,7 @@ export function InventoryTracker() {
             <Button variant="outlined" startIcon={<Refresh />}>
               Refresh
             </Button>
-            <Button variant="contained" startIcon={<CameraAlt />}>
+            <Button variant="contained" startIcon={<CameraAlt />} onClick={()=>setOpen(true)}>
               Scan New Item
             </Button>
           </Box>
@@ -156,43 +162,59 @@ export function InventoryTracker() {
             Showing {filteredInventory.length} of {inventory.length} items
           </Typography>
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Quantity</TableCell>
-                  <TableCell>Location</TableCell>
-                  <TableCell>Last Updated</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredInventory.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.location}</TableCell>
-                    <TableCell>{item.lastUpdated}</TableCell>
-                    <TableCell>
-                      <Badge
-                        color={
-                          item.status === "Alert"
-                            ? "error"
-                            : item.status === "Warning"
-                            ? "warning"
-                            : "success"
-                        }
-                        badgeContent={item.status}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+
+                {/* Popup Dialog */}
+                <Dialog open={open} onClose={()=>setOpen(false)} fullWidth maxWidth="md">
+                  <DialogTitle>Scan Item</DialogTitle>
+                  <DialogContent>
+                    <Scan />
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={()=>setOpen(false)} color="primary">
+                      Close
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+
+
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Quantity</TableCell>
+                      <TableCell>Location</TableCell>
+                      <TableCell>Last Updated</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredInventory.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.category}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.location}</TableCell>
+                        <TableCell>{item.lastUpdated}</TableCell>
+                        <TableCell>
+                          <Badge
+                            color={
+                              item.status === "Alert"
+                                ? "error"
+                                : item.status === "Warning"
+                                  ? "warning"
+                                  : "success"
+                            }
+                            badgeContent={item.status}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
         </CardContent>
       </Card>
     </Box>

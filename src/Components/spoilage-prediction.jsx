@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import Scan from './Scan';
 import {
   Card,
   CardContent,
@@ -12,6 +13,10 @@ import {
   Button,
   Alert,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import {
   Refresh as RefreshCw,
@@ -92,9 +97,21 @@ const freshnessData = [
 
 export function SpoilagePrediction() {
   const [activeTab, setActiveTab] = useState(0);
+  const [open,setOpen]=useState(false);
 
   return (
     <Box sx={{ p: 3 }}>
+    <Dialog open={open} onClose={()=>setOpen(false)} fullWidth maxWidth="md">
+                      <DialogTitle>Scan Item</DialogTitle>
+                      <DialogContent>
+                        <Scan />
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={()=>setOpen(false)} color="primary">
+                          Close
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
       <Card>
         <CardHeader
           title="Spoilage Prediction"
@@ -113,7 +130,7 @@ export function SpoilagePrediction() {
             <Button variant="outlined" startIcon={<RefreshCw />}>
               Refresh Analysis
             </Button>
-            <Button variant="contained" startIcon={<Camera />}>
+            <Button variant="contained" startIcon={<Camera />} onClick={()=>setOpen(true)}>
               Scan Item
             </Button>
           </Box>
