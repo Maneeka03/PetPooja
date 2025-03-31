@@ -1,821 +1,439 @@
+import React, { useState } from "react";
+import {
+  Upload,
+  CloudUpload,
+  Repeat,
+  AlertCircle,
+  BarChart2,
+} from "lucide-react";
 
-import React, { useState, useRef, useEffect } from "react";
-import Webcam from "react-webcam"; // Import the react-webcam package
-import { 
-  Button, 
-  Container, 
-  Typography, 
-  Card, 
-  CardContent, 
-  IconButton, 
-  Tabs, 
-  Tab, 
-  Box, 
-  TextField, 
-  Paper, 
-  CircularProgress,
-  Chip,
-  Tooltip,
-  Snackbar,
-  Alert
-} from "@mui/material";
-import { 
-  CameraAlt, 
-  Close, 
-  FileUpload, 
-  CropFree, 
-  FlashOn, 
-  FlashOff, 
-  Refresh, 
-  Analytics,
-  ZoomIn,
-  ZoomOut,
-  Save,
-  ContentCopy,
-  Download
-} from "@mui/icons-material";
+function App() {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [detectionResults, setDetectionResults] = useState(null);
+  const [detectionImage, setDetectionImage] = useState("");
+  const [error, setError] = useState("");
+  const [selectedVegetable, setSelectedVegetable] = useState(null);
 
-const AIPoweredScanner = () => {
-  const [cameraActive, setCameraActive] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [image, setImage] = useState(null);
-  const [flashMode, setFlashMode] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [results, setResults] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [zoom, setZoom] = useState(1);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [facingMode, setFacingMode] = useState("environment"); // Default to back camera
-  const webcamRef = useRef(null);
-  const canvasRef = useRef(null);
-  const dropAreaRef = useRef(null);
-
-  const handleTabChange = (event, newValue) => {
-    setSelectedTab(newValue);
-    if (newValue === 0) {
-      setCameraActive(false);
-    }
-  };
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const handleFileChange = (e) => {
+    setError("");
+    const file = e.target.files[0];
     if (file) {
-      if (file.type.match('image.*')) {
-        const imageUrl = URL.createObjectURL(file);
-        setImage(imageUrl);
-        setResults(null);
-        setSuccessMessage("Image uploaded successfully!");
-      } else {
-        setErrorMessage("Please select an image file.");
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file (JPEG, PNG, etc.)");
+        return;
       }
+      setSelectedFile(file);
+      const fileReader = new FileReader();
+      fileReader.onload = () => {
+        setPreviewUrl(fileReader.result);
+      };
+      fileReader.readAsDataURL(file);
+      setDetectionResults(null);
+      setDetectionImage("");
+      setSelectedVegetable(null);
     }
   };
 
-  // Drag and drop handlers
-  const handleDragOver = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (dropAreaRef.current) {
-      dropAreaRef.current.style.borderColor = "#1976d2"; // Changed from green to primary blue
-      dropAreaRef.current.style.backgroundColor = "#e3f2fd"; // Lighter blue background
-    }
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
-  const handleDragLeave = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (dropAreaRef.current) {
-      dropAreaRef.current.style.borderColor = "#ccc";
-      dropAreaRef.current.style.backgroundColor = "#f5f5f5";
-    }
-  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setError("");
 
-  const handleDrop = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (dropAreaRef.current) {
-      dropAreaRef.current.style.borderColor = "#ccc";
-      dropAreaRef.current.style.backgroundColor = "#f5f5f5";
-    }
-    
-    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      const file = event.dataTransfer.files[0];
-      if (file.type.match('image.*')) {
-        const imageUrl = URL.createObjectURL(file);
-        setImage(imageUrl);
-        setResults(null);
-        setSuccessMessage("Image dropped successfully!");
-      } else {
-        setErrorMessage("Please drop an image file.");
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file (JPEG, PNG, etc.)");
+        return;
       }
+      setSelectedFile(file);
+      const fileReader = new FileReader();
+      fileReader.onload = () => {
+        setPreviewUrl(fileReader.result);
+      };
+      fileReader.readAsDataURL(file);
+      setDetectionResults(null);
+      setDetectionImage("");
+      setSelectedVegetable(null);
     }
   };
 
-  const startCamera = () => {
-    setCameraActive(true);
-    setSuccessMessage("Camera started successfully!");
-  };
-
-  const stopCamera = () => {
-    setCameraActive(false);
-    setCameraReady(false);
-  };
-
-  // Function to flip between front and back camera
-  const toggleCamera = () => {
-    setFacingMode(prevMode => 
-      prevMode === "environment" ? "user" : "environment"
-    );
-    setSuccessMessage(`Switched to ${facingMode === "environment" ? "front" : "back"} camera`);
-  };
-
-  const toggleFlash = () => {
-    // This is a simulated flash toggle as react-webcam doesn't directly support flash control
-    // In a real application, you would need to implement device-specific controls
-    setFlashMode(!flashMode);
-    setSuccessMessage(flashMode ? "Flash turned off" : "Flash turned on");
-  };
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.2, 2.0));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.2, 1.0));
-  };
-
-  const captureImage = () => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        setImage(imageSrc);
-        setSuccessMessage("Image captured successfully!");
-      } else {
-        setErrorMessage("Failed to capture image. Please try again.");
-      }
-    } else {
-      setErrorMessage("Camera not ready. Please try again.");
+  const uploadImage = async () => {
+    if (!selectedFile) {
+      setError("Please select an image first");
+      return;
     }
-  };
 
-  const analyzeImage = () => {
-    setAnalyzing(true);
-    // Simulate AI analysis with more realistic results
-    setTimeout(() => {
-      setAnalyzing(false);
-      // Provide richer simulated results
-      setResults({
-        detectedObjects: ['Document', 'Text', 'Signature', 'Handwriting', 'Table'],
-        confidence: 0.94,
-        extractedText: "Sample extracted text from the image analysis would appear here. The AI has identified key elements with 94% confidence.\n\nDocument appears to be an invoice or receipt with tabular data and signatures.\n\nTimestamp: 2025-03-20\nReference: INV-20250320-001",
-        documentType: "Invoice/Receipt",
-        metadata: {
-          estimatedDate: "March 20, 2025",
-          keywords: ["payment", "receipt", "transaction"]
-        }
-      });
-      setSuccessMessage("Analysis completed!");
-    }, 2000);
-  };
+    setIsUploading(true);
+    setError("");
 
-  const copyTextToClipboard = () => {
-    if (results && results.extractedText) {
-      navigator.clipboard.writeText(results.extractedText)
-        .then(() => setSuccessMessage("Text copied to clipboard!"))
-        .catch(err => setErrorMessage("Failed to copy text: " + err.message));
-    }
-  };
+    try {
+      // Create FormData object
+      const formData = new FormData();
 
-  const downloadResults = () => {
-    if (results) {
-      const resultsBlob = new Blob(
-        [JSON.stringify(results, null, 2)], 
-        { type: 'application/json' }
+      // Try different field names that might be expected by the API
+      formData.append("file", selectedFile); // Try 'file' field name
+      formData.append("image", selectedFile); // Also include 'image' field name
+      formData.append("upload", selectedFile); // Also include 'upload' field name
+
+      // Log FormData contents (for debugging)
+      console.log(
+        "Uploading file:",
+        selectedFile.name,
+        selectedFile.type,
+        selectedFile.size
       );
-      const url = URL.createObjectURL(resultsBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'scan-results.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setSuccessMessage("Results downloaded!");
-    }
-  };
 
-  const resetAll = () => {
-    setImage(null);
-    setResults(null);
-    setSuccessMessage("Reset completed");
-  };
+      // Upload the image
+      const uploadResponse = await fetch(
+        "http://10.21.23.212:8888/upload-image",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-  // Handle Webcam component loaded event
-  const handleWebcamUserMedia = (stream) => {
-    setCameraReady(true);
-  };
+      // Log the full response for debugging
+      console.log("Upload status:", uploadResponse.status);
+      const responseText = await uploadResponse.text();
+      console.log("Response text:", responseText);
 
-  // Handle errors from Webcam component
-  const handleWebcamError = (err) => {
-    console.error("Webcam error:", err);
-    setErrorMessage(`Camera access failed: ${err.message || "Unknown error"}. Make sure camera permissions are granted.`);
-    setCameraActive(false);
-  };
-
-  // Handle component cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // Clean up when component unmounts
-      stopCamera();
-      
-      // Clean up any object URLs to prevent memory leaks
-      if (image && image.startsWith('blob:')) {
-        URL.revokeObjectURL(image);
+      if (!uploadResponse.ok) {
+        throw new Error(
+          `Upload failed with status: ${uploadResponse.status} - ${responseText}`
+        );
       }
-    };
-  }, []);
 
-  // Added animation keyframes for the scanner frame
-  const scannerAnimationKeyframes = `
-    @keyframes pulseScanner {
-      0% { opacity: 0.8; }
-      50% { opacity: 1; }
-      100% { opacity: 0.8; }
+      // Try to parse the response as JSON (if it's JSON)
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        // If it's not JSON, use the text response
+        data = [responseText];
+      }
+
+      // Parse the response - assuming format like: ["filename : {'parsley': 11, 'red cabbage': 1, ...}"]
+      if (data && data.length > 0) {
+        // Extract the JSON object from the string
+        const resultStr = data[0];
+        const colonIndex = resultStr.indexOf(":");
+
+        if (colonIndex !== -1) {
+          const jsonStr = resultStr.substring(colonIndex + 1).trim();
+          // Convert the string representation of the object to an actual object
+          try {
+            // This is a workaround as the API returns a string representation of a Python dict
+            // We need to replace single quotes with double quotes for valid JSON
+            const validJsonStr = jsonStr
+              .replace(/'/g, '"')
+              .replace(/\s+/g, " "); // Remove extra whitespace
+
+            const resultsObject = JSON.parse(validJsonStr);
+            setDetectionResults(resultsObject);
+
+            // Get the processed image
+            const imageResponse = await fetch(
+              "http://10.21.23.212:8888/get-image"
+            );
+
+            if (!imageResponse.ok) {
+              throw new Error(
+                `Failed to get processed image: ${imageResponse.status}`
+              );
+            }
+
+            const imageBlob = await imageResponse.blob();
+            setDetectionImage(URL.createObjectURL(imageBlob));
+          } catch (jsonError) {
+            console.error("Failed to parse results:", jsonError, jsonStr);
+            setError("Failed to parse detection results");
+          }
+        } else {
+          console.log("No colon found in result string:", resultStr);
+          setError("Unexpected response format");
+        }
+      } else {
+        console.log("No data received or empty array");
+        setError("No detection results returned");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setError(error.message || "Failed to process image");
+    } finally {
+      setIsUploading(false);
     }
-  `;
+  };
+
+  const resetForm = () => {
+    setSelectedFile(null);
+    setPreviewUrl("");
+    setDetectionResults(null);
+    setDetectionImage("");
+    setError("");
+    setSelectedVegetable(null);
+  };
+
+  // Calculate total vegetable count
+  const totalVegetableCount = detectionResults
+    ? Object.values(detectionResults).reduce(
+        (sum, count) => sum + Number(count),
+        0
+      )
+    : 0;
+
+  // Handle vegetable click
+  const handleVegetableClick = (vegetable) => {
+    setSelectedVegetable(selectedVegetable === vegetable ? null : vegetable);
+  };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      {/* Add scanner animation styles */}
-      <style>{scannerAnimationKeyframes}</style>
-      
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          borderRadius: 2, 
-          overflow: "hidden",
-          border: '1px solid rgba(0,0,0,0.1)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
-        }}
-      >
-        <Box sx={{ 
-          background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-          color: "white", 
-          p: 3, 
-          textAlign: "center" 
-        }}>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>AI-Powered Scanner</Typography>
-          <Typography variant="subtitle1">
-            Analyze documents, images, and objects with computer vision
-          </Typography>
-        </Box>
+    <div className="min-h-screen bg-green-50">
+      <header className="bg-gradient-to-r from-green-600 to-green-400 text-white shadow-md">
+        <div className="container mx-auto py-6 px-4">
+          <h1 className="text-3xl font-bold text-center">
+            Vegetable Detection
+          </h1>
+          <p className="text-center text-green-100">
+            Upload an image to identify and count vegetables
+          </p>
+        </div>
+      </header>
 
-        <Tabs 
-          value={selectedTab} 
-          onChange={handleTabChange} 
-          centered 
-          sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider', 
-            bgcolor: 'background.paper'
-          }}
-          TabIndicatorProps={{
-            style: {
-              height: 3,
-              borderRadius: 3
-            }
-          }}
-        >
-          <Tab 
-            label="Upload Image" 
-            icon={<FileUpload />} 
-            iconPosition="start" 
-            sx={{ 
-              textTransform: 'none', 
-              fontWeight: 500,
-              py: 2
-            }}
-          />
-          <Tab 
-            label="Scan with Camera" 
-            icon={<CameraAlt />} 
-            iconPosition="start" 
-            sx={{ 
-              textTransform: 'none', 
-              fontWeight: 500,
-              py: 2
-            }}
-          />
-        </Tabs>
+      <main className="container mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-2xl font-semibold text-green-700 mb-4">
+            Upload Image
+          </h2>
 
-        <Box sx={{ p: 3, bgcolor: 'background.paper' }}>
-          {selectedTab === 0 && (
-            <Box sx={{ textAlign: "center" }}>
-              <input
-                accept="image/*"
-                type="file"
-                id="upload-button"
-                style={{ display: "none" }}
-                onChange={handleFileUpload}
-              />
-              <label htmlFor="upload-button">
-                <Button 
-                  variant="contained" 
-                  component="span" 
-                  startIcon={<FileUpload />}
-                  size="large"
-                  sx={{ 
-                    mb: 2,
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    px: 3
-                  }}
-                >
-                  Choose Image
-                </Button>
-              </label>
-              
-              {!image && (
-                <Box 
-                  ref={dropAreaRef}
-                  sx={{ 
-                    border: '2px dashed #ccc', 
-                    borderRadius: 2, 
-                    p: 4, 
-                    mt: 2,
-                    backgroundColor: '#f5f5f5',
-                    height: 200,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <FileUpload sx={{ fontSize: 48, color: '#1976d2', mb: 2, opacity: 0.7 }} />
-                  <Typography variant="body1" color="textSecondary">
-                    Drag and drop an image here or click "Choose Image"
-                  </Typography>
-                </Box>
-              )}
-            </Box>
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center ${
+              previewUrl
+                ? "border-green-400 bg-green-50"
+                : "border-gray-300 hover:border-green-400 hover:bg-green-50"
+            } transition-colors duration-200 cursor-pointer`}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById("fileInput").click()}
+          >
+            <input
+              type="file"
+              id="fileInput"
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+
+            {!previewUrl ? (
+              <div className="space-y-4">
+                <CloudUpload className="h-16 w-16 mx-auto text-green-500" />
+                <p className="text-gray-500">
+                  Drag and drop an image here or click to browse
+                </p>
+                <p className="text-sm text-gray-400">
+                  Supported formats: JPG, PNG, JPEG
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-h-64 mx-auto rounded-md shadow-sm"
+                />
+                <p className="text-sm text-gray-500">
+                  {selectedFile?.name} ({(selectedFile?.size / 1024).toFixed(2)}{" "}
+                  KB)
+                </p>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center text-red-600">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <span>{error}</span>
+            </div>
           )}
 
-          {selectedTab === 1 && (
-            <Box sx={{ textAlign: "center" }}>
-              {!cameraActive ? (
-                <Button 
-                  variant="contained" 
-                  startIcon={<CameraAlt />}
-                  size="large" 
-                  onClick={startCamera}
-                  sx={{ 
-                    mb: 2,
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    px: 3
-                  }}
-                >
-                  Start Camera
-                </Button>
+          <div className="mt-6 flex flex-wrap gap-4 justify-center">
+            <button
+              onClick={uploadImage}
+              disabled={!selectedFile || isUploading}
+              className={`px-6 py-3 rounded-md font-medium flex items-center gap-2 ${
+                !selectedFile || isUploading
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              } transition-colors duration-200`}
+            >
+              {isUploading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span>Processing...</span>
+                </>
               ) : (
-                <Box sx={{ position: "relative", mb: 2 }}>
-                  {/* Camera controls with improved styling */}
-                  <Box sx={{ 
-                    position: "absolute", 
-                    top: 10, 
-                    right: 10, 
-                    zIndex: 2,
-                    display: 'flex',
-                    gap: 1,
-                    backdropFilter: 'blur(5px)',
-                    borderRadius: 2,
-                    padding: '4px',
-                    backgroundColor: 'rgba(255,255,255,0.2)'
-                  }}>
-                    <Tooltip title="Toggle Flash">
-                      <IconButton 
-                        sx={{ 
-                          bgcolor: 'rgba(25,118,210,0.7)', 
-                          color: 'white',
-                          '&:hover': {
-                            bgcolor: 'rgba(25,118,210,0.9)'
-                          }
-                        }}
-                        onClick={toggleFlash}
-                      >
-                        {flashMode ? <FlashOff /> : <FlashOn />}
-                      </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Flip Camera">
-                      <IconButton 
-                        sx={{ 
-                          bgcolor: 'rgba(25,118,210,0.7)', 
-                          color: 'white',
-                          '&:hover': {
-                            bgcolor: 'rgba(25,118,210,0.9)'
-                          }
-                        }}
-                        onClick={toggleCamera}
-                      >
-                        <CameraAlt />
-                      </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Zoom In">
-                      <IconButton
-                        sx={{ 
-                          bgcolor: 'rgba(25,118,210,0.7)', 
-                          color: 'white',
-                          '&:hover': {
-                            bgcolor: 'rgba(25,118,210,0.9)'
-                          }
-                        }}
-                        onClick={handleZoomIn}
-                        disabled={zoom >= 2.0}
-                      >
-                        <ZoomIn />
-                      </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Zoom Out">
-                      <IconButton
-                        sx={{ 
-                          bgcolor: 'rgba(25,118,210,0.7)', 
-                          color: 'white',
-                          '&:hover': {
-                            bgcolor: 'rgba(25,118,210,0.9)'
-                          }
-                        }}
-                        onClick={handleZoomOut}
-                        disabled={zoom <= 1.0}
-                      >
-                        <ZoomOut />
-                      </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Close Camera">
-                      <IconButton 
-                        sx={{ 
-                          bgcolor: 'rgba(211,47,47,0.7)', 
-                          color: 'white',
-                          '&:hover': {
-                            bgcolor: 'rgba(211,47,47,0.9)'
-                          }
-                        }}
-                        onClick={stopCamera}
-                      >
-                        <Close />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                  
-                  {/* Improved scanner frame with animation */}
-                  <Box sx={{ 
-                    position: "absolute", 
-                    top: '50%', 
-                    left: '50%', 
-                    transform: 'translate(-50%, -50%)', 
-                    width: '80%', 
-                    height: '80%', 
-                    border: '2px solid #1976d2',
-                    boxShadow: '0 0 0 2000px rgba(0, 0, 0, 0.15)', // Reduced opacity further
-                    zIndex: 1,
-                    pointerEvents: 'none',
-                    borderRadius: 2,
-                    display: cameraReady ? 'block' : 'none',
-                    animation: 'pulseScanner 2s infinite ease-in-out'
-                  }}>
-                    <CropFree sx={{ 
-                      position: 'absolute', 
-                      top: '50%', 
-                      left: '50%', 
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: 60,
-                      color: '#1976d2',
-                      opacity: 0.8
-                    }} />
-                  </Box>
-                  
-                  {!cameraReady && (
-                    <Box sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: 300,
-                      bgcolor: '#000',
-                      borderRadius: 2
-                    }}>
-                      <CircularProgress color="primary" />
-                      <Typography variant="body1" color="white" sx={{ mt: 2 }}>
-                        Initializing camera...
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  <Box sx={{
-                    width: '100%',
-                    height: 300,
-                    overflow: 'hidden',
-                    borderRadius: 2,
-                    bgcolor: '#000',
-                    display: cameraReady ? 'flex' : 'none',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}>
-                    <Webcam
-                      ref={webcamRef}
-                      audio={false}
-                      screenshotFormat="image/jpeg"
-                      videoConstraints={{
-                        width: 1280,
-                        height: 720,
-                        facingMode: facingMode
-                      }}
-                      onUserMedia={handleWebcamUserMedia}
-                      onUserMediaError={handleWebcamError}
-                      style={{ 
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transform: `scale(${zoom})`,
-                        transition: 'transform 0.3s ease'
-                      }}
-                    />
-                  </Box>
-                  
-                  {/* Improved capture button */}
-                  <Box sx={{ mt: 2 }}>
-                    <Button 
-                      variant="contained" 
-                      color="primary" 
-                      onClick={captureImage}
-                      startIcon={<CameraAlt />}
-                      disabled={!cameraReady}
-                      sx={{ 
-                        textTransform: 'none',
-                        borderRadius: 20,
-                        px: 4,
-                        py: 1.5,
-                        fontSize: '1.1rem',
-                        boxShadow: '0 4px 10px rgba(25,118,210,0.3)'
-                      }}
-                    >
-                      Capture
-                    </Button>
-                  </Box>
-                  
-                  <canvas ref={canvasRef} style={{ display: 'none' }} />
-                </Box>
+                <>
+                  <Upload className="h-5 w-5" />
+                  <span>Detect Vegetables</span>
+                </>
               )}
-            </Box>
-          )}
+            </button>
 
-          {image && (
-            <Box sx={{ 
-              mt: 3, 
-              p: 2, 
-              borderRadius: 2,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-              bgcolor: '#f9fafb'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>Preview</Typography>
-              <Box sx={{ 
-                position: 'relative',
-                mt: 1,
-                mb: 2,
-                display: 'inline-block',
-                maxWidth: '100%'
-              }}>
-                <img 
-                  src={image} 
-                  alt="Preview" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: 300, 
-                    objectFit: "contain",
-                    borderRadius: 8,
-                    border: '1px solid #ddd'
-                  }} 
-                />
-                <IconButton 
-                  sx={{ 
-                    position: 'absolute',
-                    top: -16,
-                    right: -16,
-                    bgcolor: 'error.main',
-                    color: 'white',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                      bgcolor: 'error.dark'
-                    }
-                  }}
-                  size="small"
-                  onClick={resetAll}
-                >
-                  <Close />
-                </IconButton>
-              </Box>
-              
-              {!analyzing && !results && (
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  startIcon={<Analytics />}
-                  onClick={analyzeImage}
-                  size="large"
-                  sx={{ 
-                    mt: 1,
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    boxShadow: '0 4px 10px rgba(25,118,210,0.3)'
-                  }}
-                >
-                  Analyze Image
-                </Button>
-              )}
-              
-              {analyzing && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  mt: 2,
-                  p: 3
-                }}>
-                  <CircularProgress size={48} color="primary" />
-                  <Typography variant="body1" sx={{ mt: 2, fontWeight: 500 }}>
-                    Processing image with AI...
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                    Detecting objects, extracting text, and analyzing content
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-          
-          {results && (
-            <Box sx={{ 
-              mt: 3, 
-              p: 3, 
-              border: '1px solid #e0e0e0', 
-              borderRadius: 2, 
-              bgcolor: '#fafafa',
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.03)'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 500, color: '#1976d2' }}>
-                Analysis Results
-              </Typography>
-              
-              <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'white', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
-                  Detected Elements
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {results.detectedObjects.map((obj, index) => (
-                    <Chip 
-                      key={index} 
-                      label={obj} 
-                      color="primary" 
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  ))}
-                </Box>
-                
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary', mt: 2 }}>
-                  Document Type
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {results.documentType}
-                </Typography>
-                
-                <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary', mt: 2 }}>
-                  Confidence Score
-                </Typography>
-                <Box sx={{ 
-                  position: 'relative', 
-                  height: 8, 
-                  bgcolor: '#e0e0e0', 
-                  borderRadius: 4,
-                  mb: 1
-                }}>
-                  <Box sx={{ 
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    height: '100%',
-                    width: `${results.confidence * 100}%`,
-                    bgcolor: results.confidence > 0.7 ? '#1976d2' : results.confidence > 0.4 ? '#ff9800' : '#f44336',
-                    borderRadius: 4
-                  }} />
-                </Box>
-                <Typography variant="body2" gutterBottom>
-                  {(results.confidence * 100).toFixed(1)}% - {
-                    results.confidence > 0.7 ? 'High confidence' : 
-                    results.confidence > 0.4 ? 'Medium confidence' : 'Low confidence'
-                  }
-                </Typography>
-              </Paper>
-              
-              <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'white', borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
-                    Extracted Text
-                  </Typography>
-                  <Tooltip title="Copy Text">
-                    <IconButton size="small" onClick={copyTextToClipboard} color="primary">
-                      <ContentCopy fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <TextField
-                  multiline
-                  rows={4}
-                  value={results.extractedText}
-                  fullWidth
-                  variant="outlined"
-                  margin="normal"
-                  InputProps={{
-                    readOnly: true,
-                    sx: { fontSize: '0.95rem' }
-                  }}
-                />
-              </Paper>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                mt: 3,
-                gap: 2
-              }}>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<Refresh />}
-                  onClick={resetAll}
-                  sx={{ textTransform: 'none' }}
-                >
-                  New Scan
-                </Button>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button 
-                    variant="outlined" 
-                    color="primary"
-                    startIcon={<Download />}
-                    onClick={downloadResults}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Download
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    color="primary"
-                    startIcon={<Save />}
-                    sx={{ 
-                      textTransform: 'none',
-                      boxShadow: '0 4px 10px rgba(25,118,210,0.2)'
-                    }}
-                  >
-                    Save Results
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </Paper>
-      
-      {/* Error and success messages */}
-      <Snackbar 
-        open={!!errorMessage} 
-        autoHideDuration={6000} 
-        onClose={() => setErrorMessage("")}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Alert onClose={() => setErrorMessage("")} severity="error" sx={{ width: '100%' }}>
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-      
-      <Snackbar 
-        open={!!successMessage} 
-        autoHideDuration={3000} 
-        onClose={() => setSuccessMessage("")}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: '100%' }}>
-          {successMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+            <button
+              onClick={resetForm}
+              className="px-6 py-3 rounded-md font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors duration-200 flex items-center gap-2"
+            >
+              <Repeat className="h-5 w-5" />
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        {detectionResults && detectionImage && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 className="text-2xl font-semibold text-green-700 mb-6">
+              Detection Results
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-700">
+                  Detected Image
+                </h3>
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <img
+                    src={detectionImage}
+                    alt="Detected vegetables"
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Summary stats */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-green-100 rounded-lg p-4 text-center">
+                    <h4 className="text-sm text-green-700 font-medium mb-1">
+                      Total Types
+                    </h4>
+                    <p className="text-2xl font-bold text-green-700">
+                      {Object.keys(detectionResults).length}
+                    </p>
+                  </div>
+                  <div className="bg-green-100 rounded-lg p-4 text-center">
+                    <h4 className="text-sm text-green-700 font-medium mb-1">
+                      Total Count
+                    </h4>
+                    <p className="text-2xl font-bold text-green-700">
+                      {totalVegetableCount}
+                    </p>
+                  </div>
+                  <div className="bg-green-100 rounded-lg p-4 text-center">
+                    <h4 className="text-sm text-green-700 font-medium mb-1">
+                      Most Common
+                    </h4>
+                    <p className="text-xl font-bold text-green-700 capitalize truncate">
+                      {
+                        Object.entries(detectionResults).sort(
+                          (a, b) => b[1] - a[1]
+                        )[0][0]
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-700">
+                  Vegetables Detected
+                </h3>
+
+                {/* Simple table of vegetables and counts - matching the reference image style */}
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  {/* Table header */}
+                  <div className="grid grid-cols-2 bg-green-50 border-b border-gray-200">
+                    <div className="p-4 font-medium text-gray-700">
+                      Vegetable
+                    </div>
+                    <div className="p-4 font-medium text-gray-700 text-right">
+                      Count
+                    </div>
+                  </div>
+
+                  {/* Table rows */}
+                  <div className="divide-y divide-gray-200">
+                    {Object.entries(detectionResults)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([vegetable, count], index) => {
+                        // Get the first letter for the circle avatar
+                        const firstLetter = vegetable.charAt(0).toUpperCase();
+
+                        return (
+                          <div
+                            key={vegetable}
+                            className="grid grid-cols-2 hover:bg-gray-50"
+                          >
+                            <div className="p-4 flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-medium">
+                                {firstLetter}
+                              </div>
+                              <div>
+                                <div className="font-medium capitalize text-gray-700">
+                                  {vegetable}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {count} detected
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-4 flex items-center justify-end">
+                              <div className="text-lg font-bold text-gray-700">
+                                {count}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="bg-green-800 text-white py-6">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-green-200">
+            &copy; {new Date().getFullYear()} Vegetable Detection System
+          </p>
+        </div>
+      </footer>
+    </div>
   );
-};
+}
 
-export default AIPoweredScanner;
+export default App;

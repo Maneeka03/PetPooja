@@ -119,7 +119,6 @@ export function OperationsOptimizer() {
         >
           <Tab label="Waste Analysis" />
           <Tab label="Recommendations" />
-          <Tab label="Projected Savings" />
         </Tabs>
 
         <CardContent>
@@ -247,24 +246,6 @@ export function OperationsOptimizer() {
                   </TableBody>
                 </Table>
               </TableContainer>
-            </Card>
-          )}
-
-          {/* Projected Savings Tab */}
-          {tabIndex === 2 && (
-            <Card
-              sx={{
-                p: 2,
-                textAlign: "center",
-                height: 200,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Savings projection visualization will appear here
-              </Typography>
             </Card>
           )}
         </CardContent>
